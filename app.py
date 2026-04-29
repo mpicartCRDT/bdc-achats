@@ -39,23 +39,23 @@ CONTROL_COLUMNS = [
 
 
 def main() -> None:
-    st.set_page_config(page_title="BDC Mathieu", layout="wide")
-    st.title("BDC Mathieu")
+    st.set_page_config(page_title="Génération de BDC", layout="wide")
+    st.title("Génération de BDC")
     st.caption("Lecture PH, génération BDC et préparation manuelle des emails.")
 
     parametrage_file = st.file_uploader(
-        "Charger Parametrage_BDC.xlsx", type=["xlsx"], key="parametrage"
+        "Charger l'excel de paramétrage", type=["xlsx"], key="parametrage"
     )
-    ph_file = st.file_uploader("Charger la PH Mathieu", type=["xlsx"], key="ph")
+    ph_file = st.file_uploader("Charger le programme", type=["xlsx"], key="ph")
     template_file = st.file_uploader(
-        "Charger le template BDC TYPE.xlsx",
+        "Charger le BDC type",
         type=["xlsx"],
         key="template",
-        help="Chargez le template Excel utilisé pour générer les BDC Mathieu.",
+        help="Chargez le BDC type utilisé pour générer les fichiers.",
     )
 
     if parametrage_file is None or ph_file is None:
-        st.info("Chargez le paramétrage puis la PH Mathieu pour lancer le contrôle.")
+        st.info("Chargez l'excel de paramétrage puis le programme pour lancer le contrôle.")
         return
 
     try:
@@ -104,7 +104,7 @@ def main() -> None:
     st.subheader("Génération BDC")
     template_source = _resolve_template_source(template_file)
     if template_source is None:
-        st.warning("Chargez le template BDC TYPE.xlsx pour préparer les fichiers BDC.")
+        st.warning("Chargez le BDC type pour préparer les fichiers BDC.")
         return
 
     if st.button("Préparer les BDC Excel"):
