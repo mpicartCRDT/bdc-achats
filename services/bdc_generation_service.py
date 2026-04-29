@@ -168,6 +168,8 @@ class BDCGenerationService:
             injected_rows=injected,
             skipped_rows=skipped_count + max(0, len(supplier_rows) - injected),
             week_number=delivery_monday.isocalendar().week,
+            delivery_week_monday=delivery_monday,
+            bdc_dates=dates,
         )
 
     def _detect_layout(self, ws: Worksheet) -> TemplateLayout:
@@ -305,8 +307,30 @@ class BDCGenerationService:
         dates = [self._as_date(row.date_source) for row in rows if row.date_source]
         if not dates:
             raise BDCGenerationError("Aucune date PH exploitable pour générer les BDC.")
-        first_delivery_date = min(dates)
+        week_number = self._source_week_number(rows)
+        if week_number is not None:
+            source_week_dates = [
+                date_value
+                for date_value in dates
+                if date_value.isocalendar().week == week_number
+            ]
+            if source_week_dates:
+                first_delivery_date = min(source_week_dates)
+                return first_delivery_date - timedelta(days=first_delivery_date.weekday())
+
+        monday_dates = [date_value for date_value in dates if date_value.weekday() == 0]
+        first_delivery_date = min(monday_dates or dates)
         return first_delivery_date - timedelta(days=first_delivery_date.weekday())
+
+    def _source_week_number(self, rows: list[NormalizedPHRow]) -> int | None:
+        week_numbers = [
+            row.source_week_number
+            for row in rows
+            if row.source_week_number is not None
+        ]
+        if not week_numbers:
+            return None
+        return min(week_numbers, key=lambda value: week_numbers.count(value))
 
     def _fixed_bdc_dates(self, delivery_monday: date) -> list[date]:
         return [

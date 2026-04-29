@@ -32,6 +32,7 @@ class MathieuParserTest(unittest.TestCase):
         self.assertEqual(rows[0].qty_unit, "pal")
         self.assertEqual(rows[0].qty_nbre_raw, 2)
         self.assertIsNone(rows[0].qty_poids_raw)
+        self.assertEqual(rows[0].source_week_number, 16)
 
         inherited = rows[1]
         self.assertEqual(inherited.source_row_index, 7)
@@ -83,6 +84,47 @@ class MathieuParserTest(unittest.TestCase):
 
         ignored = wb.create_sheet("Autre")
         ignored.append(["Pas Mathieu"])
+        return workbook_bytes(wb)
+
+    def _make_ph_workbook_with_saturday_s_minus_1(self):
+        wb = Workbook()
+        ws = wb.active
+        ws.title = "SPI 1"
+        ws.append(["Prévision semaine :", None, None, None, 16])
+        ws.append(["Jour de réception SPI 1 :"])
+        ws.append(
+            [
+                None,
+                None,
+                None,
+                "Samedi",
+                datetime(2026, 4, 11),
+                None,
+                None,
+                None,
+                "Lundi",
+                datetime(2026, 4, 13),
+                None,
+                None,
+            ]
+        )
+        ws.append(
+            [
+                None,
+                None,
+                "PP",
+                "Fournisseur",
+                "Nbre",
+                "poids",
+                "trpt",
+                "PP",
+                "Fournisseur",
+                "Nbre",
+                "poids",
+                "trpt",
+            ]
+        )
+        ws.append(["Frisée", None, None, "Ag Prog", 4, None, None, None, "Ag Prog", 2, None, None])
         return workbook_bytes(wb)
 
     def _make_text_quantity_workbook(self):

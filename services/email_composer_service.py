@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from datetime import date, timedelta
 import re
 from typing import Any
 
@@ -33,11 +34,7 @@ class EmailComposerService:
         if not generated_file.content:
             reasons.append("Fichier BDC manquant.")
 
-        variables = {
-            "week_number": generated_file.week_number or self._week_from_filename(generated_file.filename),
-            "buyer_name": self.references.buyer_name,
-            "supplier_name": generated_file.supplier_name,
-        }
+        variables = self._template_variables(generated_file)
 
         subject = self._render(template.subject_template, variables) if template else None
         body = self._render(template.body_template, variables) if template else None
@@ -80,6 +77,65 @@ class EmailComposerService:
         for key, value in variables.items():
             rendered = rendered.replace("{{" + key + "}}", "" if value is None else str(value))
         return rendered
+
+    def _template_variables(self, generated_file: GeneratedBDCFile) -> dict[str, Any]:
+        week_number = generated_file.week_number or self._week_from_filename(generated_file.filename)
+        delivery_monday = generated_file.delivery_week_monday
+        delivery_saturday = (
+            delivery_monday + timedelta(days=5)
+            if delivery_monday is not None
+            else None
+        )
+        bdc_dates = generated_file.bdc_dates
+
+        variables: dict[str, Any] = {
+            "week_number": week_number,
+            "week_number_2digits": f"{week_number:02d}" if week_number is not None else None,
+            "week": week_number,
+            "semaine": week_number,
+            "semaine_2_chiffres": f"{week_number:02d}" if week_number is not None else None,
+            "buyer_name": self.references.buyer_name,
+            "supplier_name": generated_file.supplier_name,
+            "date": self._format_date(delivery_monday),
+            "date_debut": self._format_date(delivery_monday),
+            "date_fin": self._format_date(delivery_saturday),
+            "date_livraison_debut": self._format_date(delivery_monday),
+            "date_livraison_fin": self._format_date(delivery_saturday),
+            "date_start": self._format_date(delivery_monday),
+            "date_end": self._format_date(delivery_saturday),
+            "delivery_start": self._format_date(delivery_monday),
+            "delivery_end": self._format_date(delivery_saturday),
+            "date_lundi": self._format_date(delivery_monday),
+            "date_mardi": self._format_date_from_monday(delivery_monday, 1),
+            "date_mercredi": self._format_date_from_monday(delivery_monday, 2),
+            "date_jeudi": self._format_date_from_monday(delivery_monday, 3),
+            "date_vendredi": self._format_date_from_monday(delivery_monday, 4),
+            "date_samedi": self._format_date(delivery_saturday),
+        }
+
+        block_names = [
+            "date_samedi_s_moins_1",
+            "date_lundi",
+            "date_mardi",
+            "date_mercredi",
+            "date_jeudi",
+            "date_vendredi",
+            "date_samedi",
+            "date_lundi_s_plus_1",
+        ]
+        for key, value in zip(block_names, bdc_dates):
+            variables[key] = self._format_date(value)
+        return variables
+
+    def _format_date_from_monday(self, monday: date | None, offset_days: int) -> str | None:
+        if monday is None:
+            return None
+        return self._format_date(monday + timedelta(days=offset_days))
+
+    def _format_date(self, value: date | None) -> str | None:
+        if value is None:
+            return None
+        return value.strftime("%d/%m/%Y")
 
     def _week_from_filename(self, filename: str) -> int | None:
         match = re.search(r"(?:_|\s)S(\d+)", filename)

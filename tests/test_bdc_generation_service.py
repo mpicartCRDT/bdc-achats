@@ -107,6 +107,27 @@ class BDCGenerationServiceTest(unittest.TestCase):
             ],
         )
 
+    def test_ph_week_number_keeps_dates_aligned_when_saturday_s_minus_1_is_present(self):
+        parsed = self.parser.parse(
+            MathieuParserTest()._make_ph_workbook_with_saturday_s_minus_1(),
+            "PH samedi.xlsx",
+        )
+
+        result = self.service.generate(make_bdc_template_workbook(), parsed.rows)
+
+        agricola = next(
+            file for file in result.files if file.supplier_id == "AGRICOLA_PROGRES"
+        )
+        self.assertEqual(agricola.filename, "Agricola Progres S16.xlsx")
+        self.assertEqual(agricola.week_number, 16)
+        wb = load_workbook(BytesIO(agricola.content), data_only=True)
+        ws = wb.active
+        self.assertEqual(ws["F2"].value, 16)
+        self.assertEqual(self._date_text(ws["A5"].value), "2026-04-11")
+        self.assertEqual(self._date_text(ws["A10"].value), "2026-04-13")
+        self.assertEqual(ws["C5"].value, 4)
+        self.assertEqual(ws["C10"].value, 2)
+
     def test_supplier_quantity_mode_can_force_weight_in_bdc(self):
         self.references.suppliers_by_id["AGRICOLA_PROGRES"] = replace(
             self.references.suppliers_by_id["AGRICOLA_PROGRES"],

@@ -3,6 +3,7 @@ from __future__ import annotations
 from dataclasses import dataclass
 from datetime import date, datetime
 from pathlib import Path
+import re
 from typing import Any, BinaryIO
 
 import pandas as pd
@@ -64,6 +65,7 @@ class MathieuParser:
         day_row = df.iloc[day_row_idx]
         blocks = self._build_day_blocks(header_row, day_row)
         plant = self.references.plants_by_sheet[sheet_name]
+        source_week_number = self._find_source_week_number(df)
 
         rows: list[NormalizedPHRow] = []
         current_product: Any = None
@@ -112,6 +114,7 @@ class MathieuParser:
                     excel_row_index=row_idx + 1,
                     plant_code=plant.plant_code,
                     plant_name=plant.plant_name,
+                    source_week_number=source_week_number,
                     day_block=block,
                     product_raw=product_cell,
                     row=row,
@@ -127,6 +130,35 @@ class MathieuParser:
             if "fournisseur" in normalized and "nbre" in normalized:
                 return int(idx)
         return None
+
+    def _find_source_week_number(self, df: pd.DataFrame) -> int | None:
+        for _, row in df.iterrows():
+            for col_idx, value in enumerate(row):
+                text = str(value).strip() if self._has_text(value) else ""
+                if "semaine" not in normalize_key(text):
+                    continue
+
+                number = self._extract_week_number(text)
+                if number is not None:
+                    return number
+
+                for next_col_idx in range(col_idx + 1, min(col_idx + 6, len(row))):
+                    number = self._extract_week_number(row.iloc[next_col_idx])
+                    if number is not None:
+                        return number
+        return None
+
+    def _extract_week_number(self, value: Any) -> int | None:
+        if isinstance(value, (int, float)) and not pd.isna(value):
+            number = int(value)
+            return number if 1 <= number <= 53 else None
+        if not self._has_text(value):
+            return None
+        match = re.search(r"\b(?:s(?:emaine)?\s*)?(\d{1,2})\b", str(value), re.IGNORECASE)
+        if not match:
+            return None
+        number = int(match.group(1))
+        return number if 1 <= number <= 53 else None
 
     def _build_day_blocks(self, header_row: pd.Series, day_row: pd.Series) -> list[DayBlock]:
         blocks: list[DayBlock] = []
@@ -178,6 +210,7 @@ class MathieuParser:
         excel_row_index: int,
         plant_code: str,
         plant_name: str,
+        source_week_number: int | None,
         day_block: DayBlock,
         product_raw: Any,
         row: pd.Series,
@@ -209,6 +242,7 @@ class MathieuParser:
             plant_name=plant_name,
             date_source=day_block.date_value,
             day_label_source=day_block.day_label,
+            source_week_number=source_week_number,
             supplier_raw=supplier_raw,
             supplier_id=supplier.supplier_id if supplier else None,
             supplier_name=supplier.supplier_name if supplier else None,

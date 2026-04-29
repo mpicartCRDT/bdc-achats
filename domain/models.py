@@ -66,6 +66,7 @@ class NormalizedPHRow:
     plant_name: str
     date_source: date | datetime | None
     day_label_source: str | None
+    source_week_number: int | None
     supplier_raw: Any
     supplier_id: str | None
     supplier_name: str | None
@@ -90,6 +91,7 @@ class NormalizedPHRow:
             "plant_code": self.plant_code,
             "plant_name": self.plant_name,
             "date_source": self.date_source,
+            "source_week_number": self.source_week_number,
             "day_label_source": self.day_label_source,
             "supplier_raw": self.supplier_raw,
             "supplier_id": self.supplier_id,
@@ -125,6 +127,8 @@ class GeneratedBDCFile:
     injected_rows: int
     skipped_rows: int
     week_number: int | None = None
+    delivery_week_monday: date | None = None
+    bdc_dates: list[date] = field(default_factory=list)
 
 
 @dataclass
